@@ -1,0 +1,13 @@
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[sr_customer_sk#6, sr_store_sk#10], functions=[sum(sr_return_amt#14)])
+   +- Exchange hashpartitioning(sr_customer_sk#6, sr_store_sk#10, 200), ENSURE_REQUIREMENTS, [plan_id=52]
+      +- HashAggregate(keys=[sr_customer_sk#6, sr_store_sk#10], functions=[partial_sum(sr_return_amt#14)])
+         +- Project [sr_customer_sk#6, sr_store_sk#10, sr_return_amt#14]
+            +- BroadcastHashJoin [sr_returned_date_sk#3], [d_date_sk#23], Inner, BuildRight, false
+               :- Filter isnotnull(sr_returned_date_sk#3)
+               :  +- FileScan csv spark_catalog.default.store_returns[sr_returned_date_sk#3,sr_customer_sk#6,sr_store_sk#10,sr_return_amt#14] Batched: false, DataFilters: [isnotnull(sr_returned_date_sk#3)], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:/Users/renyinghao/projects/spark_test/tpc-ds/data/store_returns.dat], PartitionFilters: [], PushedFilters: [IsNotNull(sr_returned_date_sk)], ReadSchema: struct<sr_returned_date_sk:int,sr_customer_sk:int,sr_store_sk:int,sr_return_amt:float>
+               +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=47]
+                  +- Project [d_date_sk#23]
+                     +- Filter ((isnotnull(d_year#29) AND (d_year#29 = 2001)) AND isnotnull(d_date_sk#23))
+                        +- FileScan csv spark_catalog.default.date_dim[d_date_sk#23,d_year#29] Batched: false, DataFilters: [isnotnull(d_year#29), (d_year#29 = 2001), isnotnull(d_date_sk#23)], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:/Users/renyinghao/projects/spark_test/tpc-ds/data/date_dim.dat], PartitionFilters: [], PushedFilters: [IsNotNull(d_year), EqualTo(d_year,2001), IsNotNull(d_date_sk)], ReadSchema: struct<d_date_sk:int,d_year:int>
