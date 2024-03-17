@@ -1,0 +1,71 @@
+-- start query 16 in stream 0 using template query16.tpl
+SELECT
+         Count(DISTINCT cs_order_number) AS `order count` ,
+         Sum(cs_ext_ship_cost)           AS `total shipping cost` ,
+         Sum(cs_net_profit)              AS `total net profit`
+FROM     catalog_sales cs1 ,
+         date_dim ,
+         customer_address ,
+         call_center
+WHERE    d_date BETWEEN '2002-3-01' AND      (
+                  Cast('2002-3-01' AS DATE) + INTERVAL '60' day)
+AND      cs1.cs_ship_date_sk = d_date_sk
+AND      cs1.cs_ship_addr_sk = ca_address_sk
+AND      ca_state = 'IA'
+AND      cs1.cs_call_center_sk = cc_call_center_sk
+AND      cc_county IN ('Williamson County',
+                       'Williamson County',
+                       'Williamson County',
+                       'Williamson County',
+                       'Williamson County' )
+AND      EXISTS
+         (
+                SELECT *
+                FROM   catalog_sales cs2
+                WHERE  cs1.cs_order_number = cs2.cs_order_number
+                AND    cs1.cs_warehouse_sk <> cs2.cs_warehouse_sk)
+AND      NOT EXISTS
+         (
+                SELECT *
+                FROM   catalog_returns cr1
+                WHERE  cs1.cs_order_number = cr1.cr_order_number)
+ORDER BY count(DISTINCT cs_order_number)
+LIMIT 100;
+
+== Physical Plan ==
+AdaptiveSparkPlan isFinalPlan=false
++- HashAggregate(keys=[], functions=[sum(UnscaledValue(cs_ext_ship_cost#33)), sum(UnscaledValue(cs_net_profit#38)), count(distinct cs_order_number#22)])
+   +- Exchange SinglePartition, ENSURE_REQUIREMENTS, [plan_id=1053]
+      +- HashAggregate(keys=[], functions=[merge_sum(UnscaledValue(cs_ext_ship_cost#33)), merge_sum(UnscaledValue(cs_net_profit#38)), partial_count(distinct cs_order_number#22)])
+         +- HashAggregate(keys=[cs_order_number#22], functions=[merge_sum(UnscaledValue(cs_ext_ship_cost#33)), merge_sum(UnscaledValue(cs_net_profit#38))])
+            +- HashAggregate(keys=[cs_order_number#22], functions=[partial_sum(UnscaledValue(cs_ext_ship_cost#33)), partial_sum(UnscaledValue(cs_net_profit#38))])
+               +- Project [cs_order_number#22, cs_ext_ship_cost#33, cs_net_profit#38]
+                  +- BroadcastHashJoin [cs_call_center_sk#16], [cc_call_center_sk#80], Inner, BuildRight, false
+                     :- Project [cs_call_center_sk#16, cs_order_number#22, cs_ext_ship_cost#33, cs_net_profit#38]
+                     :  +- BroadcastHashJoin [cs_ship_addr_sk#15], [ca_address_sk#67], Inner, BuildRight, false
+                     :     :- Project [cs_ship_addr_sk#15, cs_call_center_sk#16, cs_order_number#22, cs_ext_ship_cost#33, cs_net_profit#38]
+                     :     :  +- BroadcastHashJoin [cs_ship_date_sk#7], [d_date_sk#39], Inner, BuildRight, false
+                     :     :     :- BroadcastHashJoin [cs_order_number#22], [cr_order_number#128], LeftAnti, BuildRight, false
+                     :     :     :  :- Project [cs_ship_date_sk#7, cs_ship_addr_sk#15, cs_call_center_sk#16, cs_order_number#22, cs_ext_ship_cost#33, cs_net_profit#38]
+                     :     :     :  :  +- SortMergeJoin [cs_order_number#22], [cs_order_number#157], LeftSemi, NOT (cs_warehouse_sk#19 = cs_warehouse_sk#154)
+                     :     :     :  :     :- Sort [cs_order_number#22 ASC NULLS FIRST], false, 0
+                     :     :     :  :     :  +- Exchange hashpartitioning(cs_order_number#22, 200), ENSURE_REQUIREMENTS, [plan_id=1028]
+                     :     :     :  :     :     +- Filter ((isnotnull(cs_ship_date_sk#7) AND isnotnull(cs_ship_addr_sk#15)) AND isnotnull(cs_call_center_sk#16))
+                     :     :     :  :     :        +- FileScan csv spark_catalog.default.catalog_sales[cs_ship_date_sk#7,cs_ship_addr_sk#15,cs_call_center_sk#16,cs_warehouse_sk#19,cs_order_number#22,cs_ext_ship_cost#33,cs_net_profit#38] Batched: false, DataFilters: [isnotnull(cs_ship_date_sk#7), isnotnull(cs_ship_addr_sk#15), isnotnull(cs_call_center_sk#16)], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:/Users/renyinghao/Project/spark_test/tpc-ds/data/catalog_sales.dat], PartitionFilters: [], PushedFilters: [IsNotNull(cs_ship_date_sk), IsNotNull(cs_ship_addr_sk), IsNotNull(cs_call_center_sk)], ReadSchema: struct<cs_ship_date_sk:int,cs_ship_addr_sk:int,cs_call_center_sk:int,cs_warehouse_sk:int,cs_order...
+                     :     :     :  :     +- Sort [cs_order_number#157 ASC NULLS FIRST], false, 0
+                     :     :     :  :        +- Exchange hashpartitioning(cs_order_number#157, 200), ENSURE_REQUIREMENTS, [plan_id=1029]
+                     :     :     :  :           +- FileScan csv spark_catalog.default.catalog_sales[cs_warehouse_sk#154,cs_order_number#157] Batched: false, DataFilters: [], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:/Users/renyinghao/Project/spark_test/tpc-ds/data/catalog_sales.dat], PartitionFilters: [], PushedFilters: [], ReadSchema: struct<cs_warehouse_sk:int,cs_order_number:int>
+                     :     :     :  +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=1035]
+                     :     :     :     +- FileScan csv spark_catalog.default.catalog_returns[cr_order_number#128] Batched: false, DataFilters: [], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:/Users/renyinghao/Project/spark_test/tpc-ds/data/catalog_returns...., PartitionFilters: [], PushedFilters: [], ReadSchema: struct<cr_order_number:int>
+                     :     :     +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=1038]
+                     :     :        +- Project [d_date_sk#39]
+                     :     :           +- Filter (((isnotnull(d_date#41) AND (cast(d_date#41 as date) >= 2002-03-01)) AND (cast(d_date#41 as date) <= 2002-04-30)) AND isnotnull(d_date_sk#39))
+                     :     :              +- FileScan csv spark_catalog.default.date_dim[d_date_sk#39,d_date#41] Batched: false, DataFilters: [isnotnull(d_date#41), (cast(d_date#41 as date) >= 2002-03-01), (cast(d_date#41 as date) <= 2002-..., Format: CSV, Location: InMemoryFileIndex(1 paths)[file:/Users/renyinghao/Project/spark_test/tpc-ds/data/date_dim.dat], PartitionFilters: [], PushedFilters: [IsNotNull(d_date), IsNotNull(d_date_sk)], ReadSchema: struct<d_date_sk:int,d_date:string>
+                     :     +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=1042]
+                     :        +- Project [ca_address_sk#67]
+                     :           +- Filter ((isnotnull(ca_state#75) AND (ca_state#75 = IA)) AND isnotnull(ca_address_sk#67))
+                     :              +- FileScan csv spark_catalog.default.customer_address[ca_address_sk#67,ca_state#75] Batched: false, DataFilters: [isnotnull(ca_state#75), (ca_state#75 = IA), isnotnull(ca_address_sk#67)], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:/Users/renyinghao/Project/spark_test/tpc-ds/data/customer_address..., PartitionFilters: [], PushedFilters: [IsNotNull(ca_state), EqualTo(ca_state,IA), IsNotNull(ca_address_sk)], ReadSchema: struct<ca_address_sk:int,ca_state:string>
+                     +- BroadcastExchange HashedRelationBroadcastMode(List(cast(input[0, int, true] as bigint)),false), [plan_id=1046]
+                        +- Project [cc_call_center_sk#80]
+                           +- Filter ((isnotnull(cc_county#105) AND (cc_county#105 = Williamson County)) AND isnotnull(cc_call_center_sk#80))
+                              +- FileScan csv spark_catalog.default.call_center[cc_call_center_sk#80,cc_county#105] Batched: false, DataFilters: [isnotnull(cc_county#105), (cc_county#105 = Williamson County), isnotnull(cc_call_center_sk#80)], Format: CSV, Location: InMemoryFileIndex(1 paths)[file:/Users/renyinghao/Project/spark_test/tpc-ds/data/call_center.dat], PartitionFilters: [], PushedFilters: [IsNotNull(cc_county), EqualTo(cc_county,Williamson County), IsNotNull(cc_call_center_sk)], ReadSchema: struct<cc_call_center_sk:int,cc_county:string>
