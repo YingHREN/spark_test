@@ -1,0 +1,139 @@
+pal_ini = sys.argv[7].strip('[]').split(',')
+partition_array = [int(i) for i in pal_ini]   ##### for all stages
+#example [1,5,5,5,5,5,1,5]
+
+round_array = [int(i) for i in round_ini]   ####### only for map stages
+#example [1,5,-1,-1, 5, -1 , 5, -1]
+
+并行度似乎是手动设置的
+
+keylist1 = map_stage_launcher1('stage1',key1,'catalog_sales', shared_var_1)
+keylist2 = map_stage_launcher1('stage2',key2,'catalog_returns', shared_var_2)
+keylist4 = map_stage_launcher1('stage4',key4,'customer_address', shared_var_4)
+
+def map_stage_launcher2(func_name,keylist,key, shared_var):
+    print("tasks" +  " in  stage " + str(key['stageId']) + "has launched !!!!!!!!!!!!!!!!!!!")
+#         print(keylist)
+    globals()[func_name](keylist, shared_var)
+
+def stage_launcher_new(key, shared_var, func_name, scheme, start_time):
+    stageId = key['stageId']
+    partition_num = key['partition_num'][stageId-1]
+    process_pool = Pool(processes = partition_num)
+    def task_launcher(key, shared_var, func_name, taskId):
+        process_pool.apply_async(func_name, (key_now, shared_var,))
+    while (len(unlaunched_ones)) > 0
+        if scheme == 'lazy': 
+           for j in range(step_num[stageId-1]):
+               for i in range(partition_num):
+                    task_launcher(key, shared_var, func_name, i)
+        if scheme == 'eager':
+            for i in range(partition_num):
+                task_launcher(key, shared_var, func_name, i)
+        if scheme == 'reactive':
+           if start_time[stageId-1][i] < time.time() - t_ini:
+                task_launcher(key, shared_var, func_name, i)
+            
+
+def stage1:// customer sales
+    chunks_stage1 = 20
+    for k in range(int(rounds/ chunks_stage1)):
+        logger.debug("round " + str(k) + " starts")
+        t_in = time.time()
+
+###########################     create message
+        msg = create_msg(rounds, taskId, k, stageId, partition_num[c[str(stageId)]-1], t_s)
+##############################     read table
+        cs_merged = []
+        for i in range(chunks_stage1):
+            cs = read_s3_table(key, k * chunks_stage1 + i, s3_client=None)
+            cs_s = cs[wanted_columns]
+            cs_merged.append(cs_s)
+
+            
+def stage2://customer sales
+    chunks_stage2 = 5
+    for k in range(int(rounds / chunks_stage2)):
+        logger.debug("round " + str(k) + " starts")
+        t_in = time.time()
+
+###########################     create message
+        msg = create_msg(rounds, taskId, k, stageId, partition_num[c[str(stageId)]-1], t_s)
+##############################     read table
+        cr_merged = []
+        for i in range(chunks_stage2):
+            cr = read_s3_table(key, k * chunks_stage2 + i, s3_client=None)
+            logger.debug("read s3 complete, takes " + str(time.time()-t_in))
+            cr_merged.append(cr)
+#########  process
+        cr = pd.concat(cr_merged)
+
+def stage4://customer_address
+    for i in range(rounds):
+        t_in = time.time()
+        logger.debug("round " + str(i) + " starts")
+###########################     create message
+        msg = create_msg(rounds, taskId, i, stageId, partition_num[c[str(stageId)]-1], t_s)
+##############################     read table
+
+        cs = read_s3_table(key, i, s3_client=None)
+        cs = cs[cs.ca_state == 'GA'][['ca_address_sk']]
+
+def stage3://data_dim
+    broad = []
+    for i in range(rounds3):
+        t_in = time.time()
+        logger.debug("round " + str(i) + " starts")
+        dd_tmp = read_s3_table(key, i, s3_client=None)
+        logger.debug("read s3 complete, takes " + str(time.time()-t_in))
+        broad.append(dd_tmp)
+
+    broad = pd.concat(broad)
+
+def stage5://call_center
+    for i in range(rounds3):
+        logger.debug("round " + str(i) + " starts")
+        dd_tmp = read_s3_table(key, i, s3_client=None)
+
+        list_addr = ['Williamson County', 'Williamson County', 'Williamson County', 'Williamson County', 'Williamson County']
+        dd_tmp = dd_tmp[dd_tmp.cc_county.isin(list_addr)][['cc_call_center_sk']]
+
+        keys2, fac2, intfac2 = pd.build_hash_table(dd_tmp['cc_call_center_sk'], factorizer=fac2, intfactorizer=intfac2, previous_keys = keys2)
+
+        logger.debug("read s3 complete, takes " + str(time.time()-t_in))
+        broad.append(dd_tmp)
+    broad = pd.concat(broad)
+
+def stage6(key, share):
+    while fin_num<partition_numx and time.time()-t_lim < 1200:
+        if flag == 1:
+            a_1[cur_round] = time.time()
+        flag = 0 ####### flag indicates if a new round begins
+        if isinstance(ds,list) == False:
+            input_size = ds.memory_usage(index=True).sum()
+            input_array.append(input_size)
+            a_2[cur_round] = time.time() - a_1[cur_round]
+            cur_round += 1         
+            flag = 1
+            if ds.empty == False:
+                a2 = a2 + ds['cs_ext_ship_cost'].sum()
+                a3 = a3 + ds['cs_net_profit'].sum()
+            aggregated.append(ds)
+            a_3[cur_round-1] = time.time() - a_1[cur_round-1]
+    t_mid1 = time.time()
+    if aggregated:
+        aggregated = pd.concat(aggregated)
+        if aggregated.empty == False:
+            a1 = pd.unique(aggregated['cs_order_number']).size
+
+
+
+
+p1 = Process(target = map_stage_launcher2,  args = ('stage1',keylist1, key1, shared_var_1,))
+p2 = Process(target = map_stage_launcher2,  args = ('stage2',keylist2, key2, shared_var_2,))
+p4 = Process(target = map_stage_launcher2,  args = ('stage4',keylist4, key4, shared_var_4,))
+
+p3 = Process(target = stage_launcher_new , args = (key3,shared_var_3, stage3, scheme, start_time,))
+
+p5 = Process(target = stage_launcher_new , args = (key5,shared_var_5, stage5, scheme, start_time,))
+总结 并行度好像是根据profile结果等认为设置的,具体的stage 的operator个人定制化
